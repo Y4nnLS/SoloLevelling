@@ -4,12 +4,19 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.example.soloLevelling.model.dao.MissionDao
 import com.example.soloLevelling.model.dao.UserDao
+import com.example.soloLevelling.model.dao.UserMissionDao
+import com.example.soloLevelling.model.entity.Mission
 import com.example.soloLevelling.model.entity.User
+import com.example.soloLevelling.model.entity.UserMission
 
-@Database(entities = [User::class], version = 1)
+@Database(entities = [User::class, Mission::class, UserMission::class], version = 1)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
+    abstract fun missionDao(): MissionDao
+    abstract fun userMissionDao(): UserMissionDao
+
     companion object {
         @Volatile
         private var INSTANCE: AppDatabase? = null

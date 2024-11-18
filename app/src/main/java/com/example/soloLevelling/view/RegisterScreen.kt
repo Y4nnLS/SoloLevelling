@@ -1,17 +1,20 @@
 package com.example.soloLevelling.view
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.soloLevelling.viewmodel.AuthViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+import android.util.Log
+
 @Composable
 fun RegisterScreen(
     authViewModel: AuthViewModel,
@@ -21,10 +24,16 @@ fun RegisterScreen(
     var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    val context = LocalContext.current
+    val registrationError = authViewModel.registrationError.value
     val loginSuccess = authViewModel.loginSuccess.value
 
-    if (loginSuccess) {
-        onRegisterSuccess()
+    LaunchedEffect(loginSuccess) {
+        if (loginSuccess) {
+            android.util.Log.wtf("RegisterScreen", "Registro bem-sucedido, redirecionando para HomeScreen.")
+            Toast.makeText(context, "Conta criada com sucesso!", Toast.LENGTH_SHORT).show()
+            onRegisterSuccess()
+        }
     }
 
     Column(
@@ -34,12 +43,7 @@ fun RegisterScreen(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = "Crie sua Conta",
-            fontSize = 28.sp,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(bottom = 24.dp)
-        )
+        Text("Crie sua Conta", fontSize = 28.sp, modifier = Modifier.padding(bottom = 24.dp))
 
         TextField(
             value = username,
@@ -73,21 +77,27 @@ fun RegisterScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(
-            onClick = { authViewModel.registerUser(username, email, password) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
+            onClick = {
+                android.util.Log.wtf("RegisterScreen", "Tentando registrar usuário. Dados: username=$username, email=$email")
+                authViewModel.registerUser(username, email, password)
+            },
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Registrar", fontSize = 18.sp)
+            Text("Registrar")
+        }
+
+        if (registrationError.isNotEmpty()) {
+            android.util.Log.e("RegisterScreen", "Erro de registro: $registrationError")
+            Text(
+                text = registrationError,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(top = 8.dp)
+            )
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Botão "Voltar ao Menu Principal"
-        TextButton(
-            onClick = onBackToMenu,
-            modifier = Modifier.padding(horizontal = 16.dp)
-        ) {
+        TextButton(onClick = onBackToMenu) {
             Text("Voltar ao Menu Principal")
         }
     }

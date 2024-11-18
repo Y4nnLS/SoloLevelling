@@ -9,14 +9,17 @@ class UserRepository(private val userDao: UserDao, private val sharedPreferences
     fun isUserLoggedIn(): Boolean {
         return sharedPreferences.getBoolean("isLoggedIn", false)
     }
-
+    suspend fun isEmailRegistered(email: String): Boolean {
+        return userDao.getUserByEmail(email) != null
+    }
     fun setUserLoggedIn(loggedIn: Boolean) {
         sharedPreferences.edit().putBoolean("isLoggedIn", loggedIn).apply()
     }
 
-    suspend fun insertUser(user: User) {
+    suspend fun insertUser(user: User): Int {
         userDao.insert(user)
         setUserLoggedIn(true)
+        return user.id
     }
 
     suspend fun authenticateUser(email: String, password: String): User? {
