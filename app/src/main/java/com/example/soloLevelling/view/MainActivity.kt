@@ -38,7 +38,6 @@ class MainActivity : ComponentActivity() {
 
 
 
-
 @Composable
 fun AppNavigation(authViewModel: AuthViewModel, missionViewModel: MissionViewModel) {
     var currentScreen by remember { mutableStateOf("ChooseScreen") }
@@ -48,11 +47,9 @@ fun AppNavigation(authViewModel: AuthViewModel, missionViewModel: MissionViewMod
             ChooseScreen(
                 onLoginClick = {
                     currentScreen = "LoginScreen"
-                    android.util.Log.wtf("Navigation", "Navegando para LoginScreen")
                 },
                 onRegisterClick = {
                     currentScreen = "RegisterScreen"
-                    android.util.Log.wtf("Navigation", "Navegando para RegisterScreen")
                 }
             )
         }
@@ -61,14 +58,12 @@ fun AppNavigation(authViewModel: AuthViewModel, missionViewModel: MissionViewMod
                 authViewModel = authViewModel,
                 onLoginSuccess = {
                     authViewModel.loggedInUserId.value?.let { userId ->
-                        android.util.Log.wtf("Navigation", "Login bem-sucedido, UserID: $userId")
                         missionViewModel.assignMissionsToUser(userId)
                         currentScreen = "HomeScreen"
                     }
                 },
                 onBackToMenu = {
                     currentScreen = "ChooseScreen"
-                    android.util.Log.wtf("Navigation", "Voltando para ChooseScreen")
                 }
             )
         }
@@ -76,45 +71,44 @@ fun AppNavigation(authViewModel: AuthViewModel, missionViewModel: MissionViewMod
             RegisterScreen(
                 authViewModel = authViewModel,
                 onRegisterSuccess = {
-                    // Verifica se a função foi chamada
-                    android.util.Log.wtf("Navigation", "Entrou no onRegisterSuccess")
-
-                    // Imprime o valor atual de loggedInUserId
-                    val userId = authViewModel.loggedInUserId.value
-                    if (userId != null) {
-                        android.util.Log.wtf("Navigation", "Registro bem-sucedido, UserID: $userId")
-                        missionViewModel.assignMissionsToUser(userId) // Atribui missões ao usuário
-                        currentScreen = "HomeScreen" // Redireciona para HomeScreen
-                    } else {
-                        android.util.Log.e("Navigation", "Erro: UserID é nulo após registro bem-sucedido")
+                    authViewModel.loggedInUserId.value?.let { userId ->
+                        missionViewModel.assignMissionsToUser(userId)
+                        currentScreen = "HomeScreen"
                     }
                 },
                 onBackToMenu = {
                     currentScreen = "ChooseScreen"
-                    android.util.Log.wtf("Navigation", "Voltando para ChooseScreen")
                 }
             )
         }
-
         "HomeScreen" -> {
             val userId = authViewModel.loggedInUserId.value
             if (userId != null) {
-                android.util.Log.wtf("Navigation", "Carregando HomeScreen para UserID: $userId")
                 HomeScreen(
                     authViewModel = authViewModel,
                     missionViewModel = missionViewModel,
                     userId = userId,
                     onLogout = {
                         currentScreen = "ChooseScreen"
-                        android.util.Log.wtf("Navigation", "Logout realizado. Voltando para ChooseScreen")
+                    },
+                    onNavigateToMissions = {
+                        currentScreen = "MissionActivity"
                     }
                 )
-            } else {
-                android.util.Log.e("Navigation", "Erro: UserID é nulo ao tentar acessar HomeScreen")
             }
         }
+        "MissionActivity" -> {
+            MissionScreen(
+                missionViewModel = missionViewModel,
+                onBackToHome = {
+                    currentScreen = "HomeScreen"
+                }
+            )
+        }
+
     }
 }
+
 
 
 @Composable

@@ -25,4 +25,19 @@ class MissionRepository(private val missionDao: MissionDao, private val userMiss
 
         userMissionDao.insertUserMissions(userMissions)
     }
+    suspend fun deleteMission(mission: Mission) {
+        missionDao.deleteMission(mission)
+    }
+    suspend fun insertMission(mission: Mission) {
+        missionDao.insertMission(mission)
+    }
+
+    suspend fun insertMissions(missions: List<Mission>) {
+        missionDao.insertMissions(missions)
+    }
+
+    suspend fun updateMission(mission: Mission) {
+        missionDao.updateMission(mission)
+    }
+
 }

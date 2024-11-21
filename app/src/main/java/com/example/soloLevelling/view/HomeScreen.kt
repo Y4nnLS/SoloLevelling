@@ -13,12 +13,15 @@ import com.example.soloLevelling.model.entity.UserMission
 import com.example.soloLevelling.viewmodel.AuthViewModel
 import com.example.soloLevelling.viewmodel.MissionViewModel
 
+import android.content.Intent
+
 @Composable
 fun HomeScreen(
     authViewModel: AuthViewModel,
     missionViewModel: MissionViewModel,
     userId: Int,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onNavigateToMissions: () -> Unit // Callback para navegar
 ) {
     val userMissions = remember { mutableStateListOf<UserMission>() }
 
@@ -55,6 +58,13 @@ fun HomeScreen(
             onLogout()
         }) {
             Text("Logout")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Botão para redirecionar para a segunda Activity
+        Button(onClick = onNavigateToMissions, modifier = Modifier.fillMaxWidth()) {
+            Text("Gerenciar Missões")
         }
     }
 }

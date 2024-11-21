@@ -27,5 +27,29 @@ class MissionViewModel(private val repository: MissionRepository) : ViewModel() 
     suspend fun getUserMissions(userId: Int): List<UserMission> {
         return repository.getUserMissions(userId)
     }
+    fun addMission(mission: Mission) {
+        viewModelScope.launch {
+            repository.insertMission(mission)
+            missions.add(mission)
+        }
+    }
+
+    fun deleteMission(mission: Mission) {
+        viewModelScope.launch {
+            repository.deleteMission(mission)
+            missions.remove(mission)
+        }
+    }
+
+    fun updateMission(mission: Mission) {
+        viewModelScope.launch {
+            repository.updateMission(mission)
+            val index = missions.indexOfFirst { it.id == mission.id }
+            if (index != -1) {
+                missions[index] = mission
+            }
+        }
+    }
+
 }
 
