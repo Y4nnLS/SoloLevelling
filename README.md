@@ -19,6 +19,27 @@ Este projeto é um aplicativo simples de **Gerenciamento de Tarefas** desenvolvi
 Desenvolvimento de um aplicativo para o gerenciamento de tarefas, permitindo o cadastro de tarefas com descrição e prioridade, facilitando a visualização e exclusão das tarefas.
 
 ---
+## 🗺️ Diagrama de Navegação
+
+![Diagrama de Navegação](diagrama_navegacao.png)
+
+O aplicativo possui dois principais fluxos:
+1. **Tela de Login:** Permite autenticação do usuário.
+2. **Tela de Gerenciamento de Tarefas:** Após o login, o usuário pode visualizar, adicionar, editar e excluir tarefas.
+
+Usei uma representação visual para detalhar o fluxo entre as Activities, como mostrado acima.
+
+---
+
+## 📊 Diagrama de Estrutura do Banco de Dados
+Explicação das Relações
+- **User e Mission:** Muitos-para-Muitos através da tabela intermediária UserMission.
+- **Mission:** Contém informações detalhadas sobre as tarefas atribuídas.
+- **User:** Gerencia os dados de login e identidade dos usuários.
+
+IMAGEM AQUI
+
+---
 
 ## Estrutura do Projeto
 
@@ -26,47 +47,162 @@ Desenvolvimento de um aplicativo para o gerenciamento de tarefas, permitindo o c
 
 
 > [!NOTE]
-> `Tarefa`  representa cada tarefa cadastrada pelo usuário.
+> Neste projeto, temos três entidades principais: Mission, User e UserMission. Elas foram desenvolvidas para estruturar e gerenciar os dados de forma eficiente utilizando o Room Database.
 
+### Entidade: Mission
+A entidade Mission representa as missões ou atividades que podem ser atribuídas aos usuários no sistema.
 ```kotlin
-@Entity(tableName = "tarefa")
-data class Tarefa(
+@Entity(tableName = "mission")
+data class Mission(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    val nome: String,        
-    val descricao: String,    
-    val prioridade: Int       // 0: Baixa, 1: Média, 2: Alta)
+    val title: String,
+    val description: String,
+    val priority: Int, // 0: LOW, 1: MEDIUM, 2: HIGH
+    val frequency: String // DAILY, WEEKLY, MONTHLY
 )
 ```
 
-- **id**: PRIMARY KEY.
-- **nome**: Nome da tarefa.
-- **descricao**: Descrição da tarefa.
-- **prioridade**: Prioridade da tarefa.
+- **id:** PRIMARY KEY gerada automaticamente para cada missão.
+- **title:** Título da missão.
+- **description**: Descrição detalhada da missão.
+- **priority:** Prioridade da missão (0: Baixa, 1: Média, 2: Alta).
+- **frequency:** Frequência da missão (DIÁRIA, SEMANAL, MENSAL).
+
+
+### Entidade: User
+A entidade User representa os usuários registrados no sistema.
+```kotlin
+@Entity(tableName = "user")
+data class User(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val username: String,
+    val email: String,
+    val password: String
+)
+```
+
+- **id:** PRIMARY KEY gerada automaticamente para cada usuário.
+- **username:** Nome de usuário escolhido pelo participante.
+- **email:** Endereço de e-mail registrado.
+- **password:** Senha do usuário.
+
+
+### Entidade: UserMission
+A entidade UserMission conecta usuários às missões atribuídas, permitindo um relacionamento muitos-para-muitos entre User e Mission.
+```kotlin
+@Entity(tableName = "userMission")
+data class UserMission(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val userId: Int, // Relaciona a missão ao usuário
+    val missionId: Int // Relaciona à missão original
+)
+```
+
+- **id:** PRIMARY KEY gerada automaticamente para cada relação.
+- **userId:** FOREIGN KEY que referencia o ID de um usuário na tabela User.
+- **missionId:** FOREIGN KEY que referencia o ID de uma missão na tabela Mission.
+
+---
+### Relações entre Entidades
+- User ↔ UserMission
+
+Um usuário pode estar relacionado a várias missões por meio da tabela UserMission.
+
+- Mission ↔ UserMission
+
+Uma missão pode ser atribuída a vários usuários, sendo registrada na tabela UserMission.
+Essas relações permitem a criação de um sistema flexível e escalável para gerenciar atividades e atribuições personalizadas para cada usuário no aplicativo.
 
 ---
 
-### DAO (Data Access Object)
+## DAO (Data Access Object)
 
-> [!NOTE]
-> `TarefaDao` é responsável por todas as operações de banco de dados relacionadas à entidade `Tarefa`, incluindo os métodos de criação, leitura e exclusão.
+### `MissionDao`
 
+> [!NOTE]  
+> `MissionDao` é responsável pelas operações de banco de dados relacionadas à entidade `Mission`, incluindo a recuperação de todas as missões e a inserção de novas missões.
 
 ```kotlin
 @Dao
-interface TarefaDao {
-    @Insert  
-    suspend fun inserir(tarefa: Tarefa)       //Insere uma nova tarefa no banco de dados.
+interface MissionDao {
+    @Query("SELECT * FROM mission")
+    suspend fun getAllMissions(): List<Mission> 
+    // Recupera e retorna todas as missões cadastradas no banco de dados.
 
-    @Query("SELECT * FROM tarefa")
-    suspend fun buscarTodos(): List<Tarefa>   //Recupera e retorna as tarefas cadastradas no banco de dados.
-
-    @Delete
-    suspend fun deletarTarefa(tarefa: Tarefa) // Exclui uma tarefa específica do banco de dados com base em seu identificador (`id`).
+    @Insert
+    suspend fun insertMissions(missions: List<Mission>) 
+    // Insere uma lista de missões no banco de dados.
 }
 ```
+
+---
+
+### `UserDao`
+
+> [!NOTE]  
+> `UserDao` é responsável pelas operações de banco de dados relacionadas à entidade `User`, incluindo a inserção de novos usuários e a busca de um usuário por e-mail.
+
+```kotlin
+@Dao
+interface UserDao {
+    @Insert
+    suspend fun insert(user: User) 
+    // Insere um novo usuário no banco de dados.
+
+    @Query("SELECT * FROM user WHERE email = :email LIMIT 1")
+    suspend fun getUserByEmail(email: String): User? 
+    // Busca um único usuário pelo e-mail.
+}
+```
+
+---
+
+### `UserMissionDao`
+
+> [!NOTE]  
+> `UserMissionDao` gerencia as operações relacionadas à entidade `UserMission`, que conecta usuários a missões. Ele permite buscar missões associadas a um usuário e atribuir missões aleatórias.
+
+```kotlin
+@Dao
+interface UserMissionDao {
+    @Query("SELECT * FROM userMission WHERE userId = :userId")
+    suspend fun getUserMissions(userId: Int): List<UserMission> 
+    // Recupera todas as missões associadas a um usuário específico.
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertUserMissions(userMissions: List<UserMission>) 
+    // Insere ou atualiza as missões atribuídas a um usuário.
+
+    suspend fun assignRandomMissionsToUser(userId: Int, database: AppDatabase) {
+        val missionDao = database.missionDao()
+        val userMissionDao = database.userMissionDao()
+
+        // Obtém todas as missões disponíveis
+        val allMissions = missionDao.getAllMissions()
+
+        // Seleciona 3 missões aleatórias
+        val randomMissions = allMissions.shuffled().take(3)
+
+        // Cria relações para o usuário
+        val userMissions = randomMissions.map { mission ->
+            UserMission(userId = userId, missionId = mission.id)
+        }
+
+        // Insere as missões atribuídas ao banco
+        userMissionDao.insertUserMissions(userMissions)
+    }
+}
+```
+
+- **`assignRandomMissionsToUser`**: Método adicional que atribui três missões aleatórias de todas as missões disponíveis para um usuário específico. 
+
+### Resumo  
+Essas DAOs fornecem abstração sobre as operações CRUD no banco de dados Room, garantindo separação de responsabilidades e mantendo o código organizado e eficiente.
+---
 ## Funcionalidades
 
 - **Cadastro de Tarefas**: Permite adicionar uma nova tarefa com nome, descrição e prioridade.
+- **Edição de Tarefas**: Permite editar uma tarefa com nome, descrição e prioridade.
 - **Visualização das Tarefas**: Exibe todas as tarefas cadastradas.
 - **Exclusão de Tarefas**: Permite deletar uma tarefa específica da lista.
 
@@ -79,7 +215,10 @@ interface TarefaDao {
 
 @Database(entities = [Tarefa::class], version = 1)
 abstract class AppDatabase : RoomDatabase() {
-    abstract fun tarefaDao(): TarefaDao
+    abstract fun userDao(): UserDao
+    abstract fun missionDao(): MissionDao
+    abstract fun userMissionDao(): UserMissionDao
+
 
     companion object {
         @Volatile
@@ -95,6 +234,32 @@ abstract class AppDatabase : RoomDatabase() {
                 INSTANCE = instance
                 instance
             }
+        }
+    }
+}
+```
+## 🔄 Padrão MVVM (Model-View-ViewModel)
+
+Este projeto segue o padrão arquitetural MVVM:
+- **Model:** Gerencia os dados e operações (Room Database e DAOs).
+- **ViewModel:** Fornece os dados processados para a View e gerencia a lógica de interface.
+- **View:** Composta pelas Activities e Jetpack Compose, que exibem os dados fornecidos pelo ViewModel.
+
+### Exemplo: Fluxo de Inserção
+1. O usuário preenche os campos na View (Compose).
+2. O ViewModel valida os dados e chama o DAO correspondente para inserir no banco.
+3. A View é atualizada com os dados mais recentes.
+
+```kotlin
+// Exemplo de interação ViewModel ↔ DAO
+class MissionViewModel(private val missionDao: MissionDao) : ViewModel() {
+    val allMissions: LiveData<List<Mission>> = liveData {
+        emit(missionDao.getAllMissions())
+    }
+
+    fun addMission(mission: Mission) {
+        viewModelScope.launch {
+            missionDao.insert(mission)
         }
     }
 }
@@ -125,7 +290,14 @@ de nome, descrição e prioridade.
   3. Atualização da Interface: A lista de tarefas é atualizada para refletir a exclusão.
 
 ---
-## Melhorias Criativas
+## 🛠️ Melhorias Criativas
+
+### Testes Realizados
+- **Fluxo de Inserção:** Testado para garantir que tarefas são adicionadas corretamente.
+- **Fluxo de Exclusão:** Verificado se tarefas são removidas e a interface atualizada.
+- **Validação de Campos:** Certificado que campos obrigatórios não aceitam valores vazios.
+
+### Melhorias Criativas
 - **Validação de Campos Obrigatórios com Toast's**
   - Antes de salvar uma tarefa, o aplicativo fara a verificação e exibirá um Toast caso nome ou descrição estejam vazios. Informando o usuário que ele deve preencher os campos obrigatórios.
   - Essa validação evita que tarefas incompletas/mal descritas sejam salvas, melhorando a experiência do usuário na organização de suas tarefas.
@@ -144,6 +316,17 @@ de nome, descrição e prioridade.
   - Essas ordenações e filtragens proporcionam um maior controle e visibilidade das tarefas, melhorando a produtividade e ajudando o usuário a visualizar suas tarefas do jeito que preferir.
 ---
 
+### 👥 Responsabilidades dos Membros
+
+- **Felipe Franco Pinheiro:**
+  - Desenvolvimento da interface de usuário com Jetpack Compose.
+  - Implementação da navegação entre Activities.
+- **Yann Lucas:**
+  - Estruturação do banco de dados Room.
+  - Implementação das DAOs e operações CRUD.
+  - Design do padrão MVVM e integração das camadas.
+
+---
 ### Conclusão
 - Durante o desenvolvimento deste aplicativo de Gerenciamento de Tarefas, foram
 aprendidos conceitos importantes sobre o uso do Room para persistência de dados,
@@ -164,21 +347,6 @@ mantivesse uma estrutura organizada e de fácil manutenção.
 
 ---
 
-### Prompt para o ChatGPT
-```
-"Preciso de ajuda para desenvolver um aplicativo de Gerenciamento de Tarefas em Kotlin, utilizando Jetpack Compose e o banco de dados Room. 
-Preciso de:
-
-1. Definição da entidade Tarefa com campos para nome, descrição e prioridade.
-2. Criação do DAO TarefaDao com métodos para inserir, buscar e deletar tarefas.
-3. Configuração de uma classe AppDatabase com o padrão Singleton.
-4. Orientação sobre os fluxos de operação de inserção, consulta e exclusão para o aplicativo.
-5. Sugestões de melhorias criativas, como validação de campos e notificações.
-
-Poderia também gerar exemplos de código para essas funcionalidades?"
-```
-
----
 
 ## Tecnologias Utilizadas
 - [**Kotlin**](https://kotlinlang.org/docs/home.html) 
@@ -186,7 +354,22 @@ Poderia também gerar exemplos de código para essas funcionalidades?"
 - [**Room**](https://developer.android.com/training/data-storage/room) 
 - [**Coroutines**](https://kotlinlang.org/docs/coroutines-overview.html) 
 
+
+
 ---
+
+## ✅ Requisitos Funcionais Atendidos
+
+| Requisito                                      | Status         |
+|-----------------------------------------------|----------------|
+| Navegação entre pelo menos duas Activities     | ✅ Implementado |
+| Banco de dados com Room e operações CRUD       | ✅ Implementado |
+| Relacionamento entre pelo menos duas entidades | ✅ Implementado |
+| Interface responsiva com Jetpack Compose       | ✅ Implementado |
+| Padrão arquitetural MVVM                       | ✅ Implementado |
+
+---
+
 
 ## Como Executar o Projeto
 
@@ -195,7 +378,6 @@ Poderia também gerar exemplos de código para essas funcionalidades?"
 3. Compile e execute no emulador ou em um dispositivo físico.
 
 ---
-
 ## Contribuições
 
 Contribuições são bem-vindas! Se você tiver sugestões de melhorias ou novas funcionalidades, fique à vontade para abrir um *pull request*.
