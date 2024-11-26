@@ -18,25 +18,30 @@ class MissionViewModel(private val repository: MissionRepository) : ViewModel() 
         }
     }
 
-    fun assignMissionsToUser(userId: Int) {
+    fun assignMissionsToUser(userId: Int?, mission: Mission) {
+        if (userId == null) {
+            throw IllegalStateException("Erro: userId não está definido ao criar uma missão.")
+        }
         viewModelScope.launch {
-            repository.assignMissionsToUser(userId)
+            // Adiciona a missão ao banco e à lista global
+            repository.insertMissionAndAssignToUser(userId, mission)
+            if (missions.none { it.id == mission.id }) {
+                missions.add(mission) // Apenas adiciona a missão se ela ainda não estiver na lista
+            }
         }
     }
+
+
 
     suspend fun getUserMissions(userId: Int): List<UserMission> {
         return repository.getUserMissions(userId)
     }
-    fun addMission(mission: Mission) {
-        viewModelScope.launch {
-            repository.insertMission(mission)
-            missions.add(mission)
-        }
-    }
+
 
     fun deleteMission(mission: Mission) {
         viewModelScope.launch {
             repository.deleteMission(mission)
+            repository.deleteUserMissionById(missionId = mission.id)
             missions.remove(mission)
         }
     }

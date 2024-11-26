@@ -21,7 +21,7 @@ fun UserMissionsScreen(userId: Int, database: AppDatabase) {
 
     // Executa a lógica de carregamento em uma coroutine
     LaunchedEffect(userId) {
-        val userMissions = userMissionDao.getUserMissions(userId) // Suspensa
+        val userMissions = userMissionDao.getUserMissions(userId)
         missions = userMissions.mapNotNull { userMission ->
             missionDao.getAllMissions().find { it.id == userMission.missionId }
         }

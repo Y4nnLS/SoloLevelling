@@ -17,9 +17,9 @@ class UserRepository(private val userDao: UserDao, private val sharedPreferences
     }
 
     suspend fun insertUser(user: User): Int {
-        userDao.insert(user)
+        val userId = userDao.insert(user).toInt()
         setUserLoggedIn(true)
-        return user.id
+        return userId
     }
 
     suspend fun authenticateUser(email: String, password: String): User? {

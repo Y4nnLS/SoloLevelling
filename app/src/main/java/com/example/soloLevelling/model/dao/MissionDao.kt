@@ -6,13 +6,13 @@ import com.example.soloLevelling.model.entity.Mission
 @Dao
 interface MissionDao {
     @Query("SELECT * FROM mission")
-    suspend fun getAllMissions(): List<Mission> // Adicionado 'suspend'
+    suspend fun getAllMissions(): List<Mission>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertMission(mission: Mission) // Para inserir uma única missão
+    suspend fun insertMission(mission: Mission): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertMissions(missions: List<Mission>) // Para inserir múltiplas missões
+    suspend fun insertMissions(missions: List<Mission>)
 
     @Delete
     suspend fun deleteMission(mission: Mission)

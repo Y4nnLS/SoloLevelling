@@ -11,29 +11,28 @@ class MissionRepository(private val missionDao: MissionDao, private val userMiss
 
     suspend fun getUserMissions(userId: Int): List<UserMission> = userMissionDao.getUserMissions(userId)
 
-    suspend fun insertUserMissions(userMissions: List<UserMission>) {
-        userMissionDao.insertUserMissions(userMissions)
+    suspend fun insertMissionAndAssignToUser(userId: Int, mission: Mission) {
+    println("Inserindo missão...")
+    val missionId = missionDao.insertMission(mission)
+    println("Missão inserida com ID: $missionId")
+
+    if (missionId <= 0) {
+        throw IllegalStateException("Erro: ID inválido para missão após inserção.")
     }
 
-    suspend fun assignMissionsToUser(userId: Int) {
-        val allMissions = missionDao.getAllMissions()
-        val randomMissions = allMissions.shuffled().take(3)
+    println("Criando relação para userId: $userId e missionId: $missionId")
+    val userMission = UserMission(userId = userId, missionId = missionId.toInt())
+    userMissionDao.insertUserMission(userMission)
+    println("Relação criada com sucesso.")
 
-        val userMissions = randomMissions.map { mission ->
-            UserMission(userId = userId, missionId = mission.id)
-        }
+}
 
-        userMissionDao.insertUserMissions(userMissions)
+    suspend fun deleteUserMissionById(missionId: Int) {
+        userMissionDao.deleteUserMissionById(missionId)
     }
+
     suspend fun deleteMission(mission: Mission) {
         missionDao.deleteMission(mission)
-    }
-    suspend fun insertMission(mission: Mission) {
-        missionDao.insertMission(mission)
-    }
-
-    suspend fun insertMissions(missions: List<Mission>) {
-        missionDao.insertMissions(missions)
     }
 
     suspend fun updateMission(mission: Mission) {

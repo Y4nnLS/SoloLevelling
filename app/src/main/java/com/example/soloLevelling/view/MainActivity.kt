@@ -57,8 +57,8 @@ fun AppNavigation(authViewModel: AuthViewModel, missionViewModel: MissionViewMod
             LoginScreen(
                 authViewModel = authViewModel,
                 onLoginSuccess = {
-                    authViewModel.loggedInUserId.value?.let { userId ->
-                        missionViewModel.assignMissionsToUser(userId)
+                    val userId = authViewModel.loggedInUserId.value
+                    if (userId != null) {
                         currentScreen = "HomeScreen"
                     }
                 },
@@ -71,8 +71,8 @@ fun AppNavigation(authViewModel: AuthViewModel, missionViewModel: MissionViewMod
             RegisterScreen(
                 authViewModel = authViewModel,
                 onRegisterSuccess = {
-                    authViewModel.loggedInUserId.value?.let { userId ->
-                        missionViewModel.assignMissionsToUser(userId)
+                    val userId = authViewModel.loggedInUserId.value
+                    if (userId != null) {
                         currentScreen = "HomeScreen"
                     }
                 },
@@ -99,6 +99,7 @@ fun AppNavigation(authViewModel: AuthViewModel, missionViewModel: MissionViewMod
         }
         "MissionActivity" -> {
             MissionScreen(
+                authViewModel = authViewModel,
                 missionViewModel = missionViewModel,
                 onBackToHome = {
                     currentScreen = "HomeScreen"

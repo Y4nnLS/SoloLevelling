@@ -43,15 +43,11 @@ class AuthViewModel(private val userRepository: UserRepository) : ViewModel() {
         }
     }
 
-    // Após a ação de sucesso, o estado pode ser resetado, se necessário:
-    fun resetRegistrationState() {
-        registrationSuccess.value = false
-    }
-
     // Função para autenticar usuário
     fun authenticateUser(email: String, password: String) {
         viewModelScope.launch {
             val user = userRepository.authenticateUser(email, password)
+            println(user)
             if (user != null) {
                 loggedInUserId.value = user.id
                 loginSuccess.value = true

@@ -1,6 +1,5 @@
 package com.example.soloLevelling.view
 
-import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -13,13 +12,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.soloLevelling.AppDatabase
 import com.example.soloLevelling.model.entity.Mission
 import com.example.soloLevelling.model.repository.MissionRepository
+import com.example.soloLevelling.model.repository.UserRepository
+import com.example.soloLevelling.viewmodel.AuthViewModel
+import com.example.soloLevelling.viewmodel.AuthViewModelFactory
 import com.example.soloLevelling.viewmodel.MissionViewModel
 
 class MissionActivity : ComponentActivity() {
@@ -29,43 +30,25 @@ class MissionActivity : ComponentActivity() {
             val db = AppDatabase.getDatabase(this)
             val missionRepository = MissionRepository(db.missionDao(), db.userMissionDao())
             val missionViewModel = MissionViewModel(repository = missionRepository)
+            val userRepository = UserRepository(db.userDao(), getSharedPreferences("UserPrefs", MODE_PRIVATE))
+            val authViewModel: AuthViewModel = viewModel(factory = AuthViewModelFactory(userRepository))
 
             MissionScreen(
+                authViewModel = authViewModel,
                 missionViewModel = missionViewModel,
                 onBackToHome = { finish() } // Fecha a MissionActivity e retorna à anterior
             )        }
     }
 }
-@Composable
-fun MissionActivityContent(missionViewModel: MissionViewModel) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text("Bem-vindo à Gerência de Missões", fontSize = 24.sp)
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = {
-            // Ação para retornar à HomeScreen, caso necessário
-        }) {
-            Text("Voltar")
-        }
-    }
-}
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MissionScreen(missionViewModel: MissionViewModel, onBackToHome: () -> Unit) {
-    val context = LocalContext.current // Certifique-se de que isso está dentro de um @Composable
+fun MissionScreen(authViewModel: AuthViewModel, missionViewModel: MissionViewModel, onBackToHome: () -> Unit) {
     var missionTitle by remember { mutableStateOf("") }
     var missionDescription by remember { mutableStateOf("") }
-    var missionPriority by remember { mutableStateOf(1) }
+    var missionPriority by remember { mutableIntStateOf(1) }
     var missionFrequency by remember { mutableStateOf("DAILY") }
     var editingMission by remember { mutableStateOf<Mission?>(null) } // Estado para edição
     var showDeleteDialog by remember { mutableStateOf(false) } // Estado para mostrar o dialog
-
     val missions = missionViewModel.missions
 
     // Listas para os valores de prioridade e frequência
@@ -256,14 +239,18 @@ fun MissionScreen(missionViewModel: MissionViewModel, onBackToHome: () -> Unit) 
                         editingMission = null
                     } else {
                         // Adiciona nova missão
-                        missionViewModel.addMission(
-                            Mission(
+                        if (missionTitle.isNotEmpty() && missionDescription.isNotEmpty()) {
+                            val mission = Mission(
                                 title = missionTitle,
                                 description = missionDescription,
                                 priority = missionPriority,
                                 frequency = missionFrequency
                             )
-                        )
+                            val userId = authViewModel.loggedInUserId.value
+                            if (userId != null) {
+                                missionViewModel.assignMissionsToUser(userId = userId, mission = mission)
+                            }
+                        }
                     }
                     missionTitle = ""
                     missionDescription = ""

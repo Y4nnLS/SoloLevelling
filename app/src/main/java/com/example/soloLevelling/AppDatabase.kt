@@ -11,7 +11,7 @@ import com.example.soloLevelling.model.entity.Mission
 import com.example.soloLevelling.model.entity.User
 import com.example.soloLevelling.model.entity.UserMission
 
-@Database(entities = [User::class, Mission::class, UserMission::class], version = 1)
+@Database(entities = [User::class, Mission::class, UserMission::class], version = 1, exportSchema = true)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
     abstract fun missionDao(): MissionDao

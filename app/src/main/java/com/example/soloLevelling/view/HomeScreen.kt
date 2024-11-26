@@ -13,8 +13,6 @@ import com.example.soloLevelling.model.entity.UserMission
 import com.example.soloLevelling.viewmodel.AuthViewModel
 import com.example.soloLevelling.viewmodel.MissionViewModel
 
-import android.content.Intent
-
 @Composable
 fun HomeScreen(
     authViewModel: AuthViewModel,
@@ -26,8 +24,11 @@ fun HomeScreen(
     val userMissions = remember { mutableStateListOf<UserMission>() }
 
     // Carrega as missões do usuário na inicialização da tela
-    LaunchedEffect(userId) {
+    LaunchedEffect(userId, missionViewModel.missions) {
+        println("Buscando missões para userId: $userId")
         val missions = missionViewModel.getUserMissions(userId)
+        println("Missões atribuídas encontradas: $missions")
+        userMissions.clear()
         userMissions.addAll(missions)
     }
 
@@ -48,6 +49,8 @@ fun HomeScreen(
             val mission = missionViewModel.missions.find { it.id == userMission.missionId }
             if (mission != null) {
                 Text("- ${mission.title}: ${mission.description}")
+            } else {
+                Text("- Missão não encontrada para ID: ${userMission.missionId}")
             }
         }
 

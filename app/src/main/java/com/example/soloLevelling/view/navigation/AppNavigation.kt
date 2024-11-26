@@ -27,7 +27,7 @@ fun RegisterScreen(
     LaunchedEffect(loginSuccess) {
         if (loginSuccess) {
             Toast.makeText(context, "Conta criada com sucesso!", Toast.LENGTH_LONG).show()
-            onRegisterSuccess() // Redireciona para a tela desejada
+            onRegisterSuccess()
         }
     }
 
