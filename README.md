@@ -21,7 +21,8 @@ Desenvolvimento de um aplicativo para o gerenciamento de tarefas, permitindo o c
 ---
 ## 🗺️ Diagrama de Navegação
 
-![Diagrama de Navegação](diagrama_navegacao.png)
+![Diagrama1](https://github.com/user-attachments/assets/916fed0c-c843-4a0b-a9f2-f3c30a2d7491)
+
 
 O aplicativo possui dois principais fluxos:
 1. **Tela de Login:** Permite autenticação do usuário.
@@ -32,6 +33,10 @@ Usei uma representação visual para detalhar o fluxo entre as Activities, como 
 ---
 
 ## 📊 Diagrama de Estrutura do Banco de Dados
+
+![Diagrama2](https://github.com/user-attachments/assets/02fafff2-5498-4c57-b617-09e55052e8b5)
+
+
 Explicação das Relações
 - **User e Mission:** Muitos-para-Muitos através da tabela intermediária UserMission.
 - **Mission:** Contém informações detalhadas sobre as tarefas atribuídas.
