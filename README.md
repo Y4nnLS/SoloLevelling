@@ -95,11 +95,31 @@ data class User(
 ### Entidade: UserMission
 A entidade UserMission conecta usuários às missões atribuídas, permitindo um relacionamento muitos-para-muitos entre User e Mission.
 ```kotlin
-@Entity(tableName = "userMission")
+@Entity(
+    tableName = "userMission",
+    foreignKeys = [
+        ForeignKey(
+            entity = Mission::class,
+            parentColumns = ["id"],
+            childColumns = ["missionId"],
+            onDelete = ForeignKey.CASCADE
+        ),
+        ForeignKey(
+            entity = User::class,
+            parentColumns = ["id"],
+            childColumns = ["userId"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ],
+    indices = [
+        Index(value = ["missionId"]),
+        Index(value = ["userId"])
+    ]
+)
 data class UserMission(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    val userId: Int, // Relaciona a missão ao usuário
-    val missionId: Int // Relaciona à missão original
+    @ColumnInfo(name = "userId") val userId: Int,
+    @ColumnInfo(name = "missionId") val missionId: Int
 )
 ```
 
@@ -131,12 +151,19 @@ Essas relações permitem a criação de um sistema flexível e escalável para 
 @Dao
 interface MissionDao {
     @Query("SELECT * FROM mission")
-    suspend fun getAllMissions(): List<Mission> 
-    // Recupera e retorna todas as missões cadastradas no banco de dados.
+    suspend fun getAllMissions(): List<Mission>
 
-    @Insert
-    suspend fun insertMissions(missions: List<Mission>) 
-    // Insere uma lista de missões no banco de dados.
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertMission(mission: Mission): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertMissions(missions: List<Mission>)
+
+    @Delete
+    suspend fun deleteMission(mission: Mission)
+
+    @Update
+    suspend fun updateMission(mission: Mission)
 }
 ```
 
@@ -171,31 +198,14 @@ interface UserDao {
 @Dao
 interface UserMissionDao {
     @Query("SELECT * FROM userMission WHERE userId = :userId")
-    suspend fun getUserMissions(userId: Int): List<UserMission> 
-    // Recupera todas as missões associadas a um usuário específico.
+    suspend fun getUserMissions(userId: Int): List<UserMission>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertUserMissions(userMissions: List<UserMission>) 
-    // Insere ou atualiza as missões atribuídas a um usuário.
+    suspend fun insertUserMission(userMission: UserMission)
 
-    suspend fun assignRandomMissionsToUser(userId: Int, database: AppDatabase) {
-        val missionDao = database.missionDao()
-        val userMissionDao = database.userMissionDao()
+    @Query("DELETE FROM userMission WHERE id = :missionId")
+    suspend fun deleteUserMissionById(missionId: Int)
 
-        // Obtém todas as missões disponíveis
-        val allMissions = missionDao.getAllMissions()
-
-        // Seleciona 3 missões aleatórias
-        val randomMissions = allMissions.shuffled().take(3)
-
-        // Cria relações para o usuário
-        val userMissions = randomMissions.map { mission ->
-            UserMission(userId = userId, missionId = mission.id)
-        }
-
-        // Insere as missões atribuídas ao banco
-        userMissionDao.insertUserMissions(userMissions)
-    }
 }
 ```
 
@@ -218,12 +228,11 @@ Essas DAOs fornecem abstração sobre as operações CRUD no banco de dados Room
 
 ```kotlin
 
-@Database(entities = [Tarefa::class], version = 1)
+@Database(entities = [User::class, Mission::class, UserMission::class], version = 1, exportSchema = true)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
     abstract fun missionDao(): MissionDao
     abstract fun userMissionDao(): UserMissionDao
-
 
     companion object {
         @Volatile
@@ -257,41 +266,72 @@ Este projeto segue o padrão arquitetural MVVM:
 
 ```kotlin
 // Exemplo de interação ViewModel ↔ DAO
-class MissionViewModel(private val missionDao: MissionDao) : ViewModel() {
-    val allMissions: LiveData<List<Mission>> = liveData {
-        emit(missionDao.getAllMissions())
+class MissionViewModel(private val repository: MissionRepository) : ViewModel() {
+
+    val missions = mutableStateListOf<Mission>()
+
+    init {
+        viewModelScope.launch {
+            missions.addAll(repository.getAllMissions())
+        }
     }
 
-    fun addMission(mission: Mission) {
+    fun assignMissionsToUser(userId: Int?, mission: Mission) {
+        if (userId == null) {
+            throw IllegalStateException("Erro: userId não está definido ao criar uma missão.")
+        }
         viewModelScope.launch {
-            missionDao.insert(mission)
+            // Adiciona a missão ao banco e à lista global
+            repository.insertMissionAndAssignToUser(userId, mission)
+            if (missions.none { it.id == mission.id }) {
+                missions.add(mission) // Apenas adiciona a missão se ela ainda não estiver na lista
+            }
+        }
+    }
+
+
+
+    suspend fun getUserMissions(userId: Int): List<UserMission> {
+        return repository.getUserMissions(userId)
+    }
+
+
+    fun deleteMission(mission: Mission) {
+        viewModelScope.launch {
+            repository.deleteMission(mission)
+            repository.deleteUserMissionById(missionId = mission.id)
+            missions.remove(mission)
+        }
+    }
+
+    fun updateMission(mission: Mission) {
+        viewModelScope.launch {
+            repository.updateMission(mission)
+            val index = missions.indexOfFirst { it.id == mission.id }
+            if (index != -1) {
+                missions[index] = mission
+            }
         }
     }
 }
 ```
 ---
 ### Fluxo de Operações
-- Fluxo de Inserção:
-  1. Interação do Usuário: O usuário acessa a tela de cadastro e preenche os
-campos de nome, descrição e prioridade.
-  2. Ação de Inserção: Ao clicar no botão "Salvar", o aplicativo valida os campos
-obrigatórios.
-  3. Inserção no Banco: Após a validação, a tarefa é salva no banco de dados pelo
-método `inserir` do `TarefaDao`. A operação é executada em uma coroutine
-para evitar o bloqueio da interface.
-  4. Atualização da Interface: Após a inserção, o app atualiza a lista de exibição com
-as tarefas mais recentes.
-- Fluxo de Consulta:
-  1. Inicialização do App: Quando o aplicativo inicia, ele carrega todas as tarefas do
-banco de dados por meio do método `buscarTodos`.
-  2. Exibição dos Dados: As tarefas são exibidas em uma lista na interface usando
-`LazyColumn` no Jetpack Compose, apresentando cada tarefa com detalhes
-de nome, descrição e prioridade.
+
+- **Fluxo de Inserção de Missões**:  
+  1. **Interação do Usuário**: O usuário acessa o formulário de cadastro de missões e preenche os campos, como nome, descrição, prioridade e frequencia da missão.  
+  2. **Ação de Cadastro**: Após preencher os campos obrigatórios, o usuário clica no botão "Cadastrar". O aplicativo valida os campos para garantir que todas as informações necessárias foram fornecidas.  
+  3. **Inserção no Banco de Dados**: Após a validação, a missão é salva no banco de dados de missões por meio do método `insert` do DAO correspondente. Simultaneamente, o aplicativo obtém o ID do usuário que adicionou a missão e o ID da missão recém-criada. Esses dados são salvos no banco de dados `UserMission` por meio de uma operação separada. Todas essas ações são executadas em coroutines para evitar o bloqueio da interface do usuário.  
+  4. **Atualização da Interface**: Após as operações bem-sucedidas, o aplicativo atualiza as listas relacionadas, garantindo que as novas missões sejam exibidas para o usuário imediatamente.
+
+- Fluxo de edição:
+  1. Interação do Usuário: O usuário clica no botão de "editar" do lado de uma tarefa, os dados da missao são apresentados nos inputs.
+  2. Ação de Edição: O usuário pode editar a tarefa desejada, alterando no banco de dados de missao.
+  3. Atualização da Interface: A lista de tarefas é atualizada para refletir a edição.
+
 - Fluxo de Exclusão:
-  1. Interação do Usuário: O usuário seleciona uma tarefa e escolhe a opção
-"Excluir".
-  2. Ação de Exclusão: A tarefa é removida do banco de dados pelo método
-`deletarTarefa`.
+  1. Interação do Usuário: O usuário clica no botão de "excluir" do lado de uma tarefa.
+  2. Ação de Exclusão: A tarefa é removida do banco de dados de missao e do banco de usermission
   3. Atualização da Interface: A lista de tarefas é atualizada para refletir a exclusão.
 
 ---
@@ -336,7 +376,7 @@ de nome, descrição e prioridade.
 - Durante o desenvolvimento deste aplicativo de Gerenciamento de Tarefas, foram
 aprendidos conceitos importantes sobre o uso do Room para persistência de dados,
 integração com o Jetpack Compose para uma interface dinâmica e reativa, além da
-organização do código para garantir o padrão de projeto Singleton, essencial em
+organização do código para garantir o padrão de projeto MVVM, essencial em
 aplicativos Android.
 - ### Principais Aprendizados:
   - Como estruturar uma base de dados utilizando o Room e trabalhar com
