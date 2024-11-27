@@ -34,7 +34,7 @@ Usei uma representação visual para detalhar o fluxo entre as Activities, como 
 
 ## 📊 Diagrama de Estrutura do Banco de Dados
 
-![Diagrama2](https://github.com/user-attachments/assets/02fafff2-5498-4c57-b617-09e55052e8b5)
+![Diagrama2](https://github.com/user-attachments/assets/534ccb78-4030-42d2-8a33-874a470e90a5)
 
 
 Explicação das Relações
